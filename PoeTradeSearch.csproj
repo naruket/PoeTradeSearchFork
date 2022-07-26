@@ -34,7 +34,7 @@
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
+    <DebugType>portable</DebugType>
     <Optimize>false</Optimize>
     <OutputPath>bin\Debug\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
@@ -112,7 +112,7 @@
     </Compile>
     <Compile Include="Methods.cs" />
     <Compile Include="Configure.cs" />
-    <Compile Include="test.cs" />
+    <!-- <Compile Include="test.cs" /> -->
     <Compile Include="Updates.cs" />
     <Compile Include="WinSetting.xaml.cs">
       <DependentUpon>WinSetting.xaml</DependentUpon>

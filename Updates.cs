@@ -15,7 +15,7 @@ namespace PoeTradeSearch
             // 마우스 훜시 프로그램에 딜레이가 생겨 쓰레드 처리
             Thread thread = new Thread(() =>
             {
-                string u = "https://raw.githubusercontent.com/phiDelPark/PoeTradeSearch/master/VERSIONS";
+                string u = "https://raw.githubusercontent.com/naruket/PoeTradeSearchFork/master/VERSIONS";
                 string ver_string = SendHTTP(null, u, 3);
                 if ((ver_string ?? "") != "")
                 {
@@ -187,7 +187,7 @@ namespace PoeTradeSearch
             // 마우스 훜시 프로그램에 딜레이가 생겨 쓰레드 처리
             Thread thread = new Thread(() =>
             {
-                string u = "https://raw.githubusercontent.com/phiDelPark/PoeTradeSearch/master/_POE_Data/" + filename;
+                string u = "https://raw.githubusercontent.com/naruket/PoeTradeSearchFork/master/_POE_Data/" + filename;
                 string v_string = SendHTTP(null, u, 3);
                 if ((v_string ?? "") != "")
                 {
