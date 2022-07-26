@@ -177,6 +177,8 @@ namespace PoeTradeSearch
         internal ParserDict Heist = null;
         [DataMember(Name = "logbook")]
         internal ParserDict Logbook = null;
+        [DataMember(Name = "reverse_increase_decrease")]
+        internal ParserDict ReverseIncreaseDecrease = null;
     }
 
     [DataContract]

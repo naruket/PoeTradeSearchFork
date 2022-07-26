@@ -198,10 +198,10 @@ namespace PoeTradeSearch
 
             string[] ItemBaseParser(string[] opts)
             {
-                string category = opts[0].Split(':')[1].Trim();
-                string rarity = opts[1].Split(':')[1].Trim();
+                string category = opts[0].Split(':')[1].Trim(); // 종류. 갑옷, 장갑 등
+                string rarity = opts[1].Split(':')[1].Trim(); // 희귀도. 레어, 마법 등
                 string name = Regex.Replace(opts[2] ?? "", @"<<set:[A-Z]+>>", "");
-                bool b = opts.Length > 3 && opts[3] != "";
+                bool b = opts.Length > 3 && opts[3] != ""; // 일반, 마법 등급은 3번줄의 아이템 이름(예. 소름 끼치는 조임쇠)이 없음. 4번줄이 있을 경우 true
                 return new string[] { category, rarity, b ? name : "",
                     b ? Regex.Replace(opts[3] ?? "", @"<<set:[A-Z]+>>", "") : name
                 };
@@ -238,15 +238,18 @@ namespace PoeTradeSearch
 
                 if (asData.Length > 1 && (asData[0].IndexOf(PS.Category.Text[0] + ": ") == 0 || asData[0].IndexOf(PS.Category.Text[1] + ": ") == 0))
                 {
+                    // reset window
                     ResetControls();
 
-                    byte z = (byte)(asData[0].IndexOf(PS.Category.Text[0] + ": ") == 0 ? 0 : 1); // language
+                    // language. 0: korean, 1: english
+                    byte z = (byte)(asData[0].IndexOf(PS.Category.Text[0] + ": ") == 0 ? 0 : 1);
+                    // 베이스 찾기. 종류(갑옷, 장갑 등), 희귀도(마법, 희귀 등), 이름, 베이스로 배열이 생성되어 들어감
                     string[] ibase_info = ItemBaseParser(asData[0].Trim().Split(new string[] { "\r\n" }, StringSplitOptions.None));
 
                     ParserDictItem category = Array.Find(PS.Category.Entries, x => x.Text[z] == ibase_info[0]); // category
-                    string[] cate_ids = category != null ? category.Id.Split('.') : new string[] { "" };
+                    string[] cate_ids = category != null ? category.Id.Split('.') : new string[] { "" }; // ex) {"id":"armour.chest","key":"armour","text":[ "갑옷", "Body Armours" ]}
                     ParserDictItem rarity = Array.Find(PS.Rarity.Entries, x => x.Text[z] == ibase_info[1]); // rarity
-                    rarity = rarity == null ? new ParserDictItem() { Id = "", Text = new string[] { ibase_info[1], ibase_info[1] } } : rarity;
+                    rarity = rarity == null ? new ParserDictItem() { Id = "", Text = new string[] { ibase_info[1], ibase_info[1] } } : rarity; // ex) {"id":"rare","text":[ "희귀", "Rare" ]}
 
                     int k = 0;
                     double attackSpeedIncr = 0, PhysicalDamageIncr = 0;
@@ -289,9 +292,9 @@ namespace PoeTradeSearch
                                 {
                                     string input = options[o].RepEx(@"\s(\([a-zA-Z]+\)|—\s.+)$", "");
                                     string ft_type = options[o].Split(new string[] { "\n" }, 0)[0].RepEx(@"(.+)\s\(([a-zA-Z]+)\)$", "$2");
-                                    if (!RS.lFilterType.ContainsKey(ft_type)) ft_type = "_none_";
+                                    if (!RS.lFilterType.ContainsKey(ft_type)) ft_type = "_none_"; // 영향력 검사???
 
-                                    bool _resistance = false;
+                                    bool _resistance = false; // 저항
                                     double min = 99999, max = 99999;
                                     ParserDictItem special_option = null;
 
@@ -421,6 +424,101 @@ namespace PoeTradeSearch
                                                     }
 
                                                     break;
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    if (filter == null)
+                                    {
+                                        // "동작 속도 #% 증가" 처럼, 내부적으로는 음수로 계산할 경우를 위해 루프를 한번 더 돌림
+                                        bool flag = false;
+                                        for (int l = 0; l < PS.ReverseIncreaseDecrease.Entries.Length; l++)
+                                        {
+                                            if (input.Contains(PS.ReverseIncreaseDecrease.Entries[l].Text[z]))
+                                            {
+                                                input = Regex.Replace(input, PS.ReverseIncreaseDecrease.Entries[l].Text[z], PS.ReverseIncreaseDecrease.Entries[l%2==0?l+1:l-1].Text[z]);
+                                                flag = true;
+                                                break;
+                                            }
+                                        }
+                                        if (flag)
+                                        {
+                                            foreach (FilterDict data_result in mFilter[z].Result)
+                                            {
+                                                Regex rgx = new Regex("^" + input + "$", RegexOptions.IgnoreCase);
+                                                FilterDictItem[] entries = Array.FindAll(data_result.Entries, x => rgx.IsMatch(x.Text));
+
+                                                // 2개 이상 같은 옵션이 있을때 장비 옵션 (특정) 만 추출
+                                                if (entries.Length > 1)
+                                                {
+                                                    FilterDictItem[] entries_tmp = Array.FindAll(entries, x => x.Part == cate_ids[0]);
+                                                    // 화살통 제외
+                                                    if (entries_tmp.Length > 0 && (cate_ids.Length == 1 || cate_ids[1] != "quiver"))
+                                                    {
+                                                        local_exists = true;
+                                                        entries = entries_tmp;
+                                                    }
+                                                    else
+                                                    {
+                                                        entries = Array.FindAll(entries, x => x.Part == null);
+                                                    }
+                                                }
+
+                                                if (entries.Length > 0)
+                                                {
+                                                    Array.Sort(entries, delegate (FilterDictItem entrie1, FilterDictItem entrie2)
+                                                    {
+                                                        return (entrie2.Part ?? "").CompareTo(entrie1.Part ?? "");
+                                                    });
+
+                                                    MatchCollection matches1 = Regex.Matches(options[o], @"[-]?([0-9]+\.[0-9]+|[0-9]+)");
+                                                    foreach (FilterDictItem entrie in entries)
+                                                    {
+                                                        int idxMin = 0, idxMax = 0;
+                                                        bool isMin = false, isMax = false;
+                                                        bool isBreak = true;
+
+                                                        MatchCollection matches2 = Regex.Matches(entrie.Text.Split('\n')[0], @"[-]?([0-9]+\.[0-9]+|[0-9]+|#)");
+
+                                                        for (int t = 0; t < matches2.Count; t++)
+                                                        {
+                                                            if (matches2[t].Value == "#")
+                                                            {
+                                                                if (!isMax)
+                                                                {
+                                                                    isMax = true;
+                                                                    idxMax = t;
+                                                                }
+                                                                else if (!isMin)
+                                                                {
+                                                                    isMin = true;
+                                                                    idxMin = t;
+                                                                }
+                                                            }
+                                                            else if (matches1[t].Value != matches2[t].Value)
+                                                            {
+                                                                isBreak = false;
+                                                                break;
+                                                            }
+                                                        }
+
+                                                        if (isBreak)
+                                                        {
+                                                            string[] id_split = entrie.Id.Split('.');
+                                                            (FindName("cbOpt" + k) as ComboBox).Items.Add(new FilterEntrie(cate_ids[0], id_split[0], id_split[1], data_result.Label));
+
+                                                            if (filter == null)
+                                                            {
+                                                                filter = entrie;
+                                                                _resistance = id_split.Length == 2 && RS.lResistance.ContainsKey(id_split[1]);
+                                                                max = isMax && matches1.Count > idxMax ? ((Match)matches1[idxMax]).Value.ToDouble(99999) : 99999;
+                                                                min = isMin && idxMin < idxMax && matches1.Count > idxMin ? ((Match)matches1[idxMin]).Value.ToDouble(99999) : 99999;
+                                                            }
+
+                                                            break;
+                                                        }
+                                                    }
                                                 }
                                             }
                                         }

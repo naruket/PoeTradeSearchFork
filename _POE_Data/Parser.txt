@@ -380,5 +380,12 @@
 	"warlord_item":{"text":[ "전쟁군주 아이템", "Warlord Item" ]},
 	"synthesised_item":{"text":[ "결합된 아이템", "Synthesised Item" ]},
 	"prophecy_item":{"text":[ "우클릭으로 이 예언을 캐릭터에 추가하십시오.", "Right-click to add this prophecy to your character." ]},
-	"unstack_items":{"text":[ "Shift + 클릭으로 아이템 나누기", "Shift click to unstack" ]}
+	"unstack_items":{"text":[ "Shift + 클릭으로 아이템 나누기", "Shift click to unstack" ]},
+
+	"reverse_increase_decrease":{
+		"entries":[
+			{"text":["증가","increased"]},
+			{"text":["감소","reduced"]}
+		]
+	}
 }
