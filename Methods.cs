@@ -355,6 +355,23 @@ namespace PoeTradeSearch
                                     {
                                         Regex rgx = new Regex("^" + input + "$", RegexOptions.IgnoreCase);
                                         FilterDictItem[] entries = Array.FindAll(data_result.Entries, x => rgx.IsMatch(x.Text));
+                                        // "동작 속도 #% 증가" 처럼, 내부적으로는 음수로 계산할 경우를 위해
+                                        bool reverseFlag = false;
+                                        for (int l = 0; l < PS.ReverseIncreaseDecrease.Entries.Length; l++)
+                                        {
+                                            if (input.Contains(PS.ReverseIncreaseDecrease.Entries[l].Text[z]))
+                                            {
+                                                string input_tmp = Regex.Replace(input, PS.ReverseIncreaseDecrease.Entries[l].Text[z], PS.ReverseIncreaseDecrease.Entries[l%2==0?l+1:l-1].Text[z]);
+                                                Regex rgx_tmp = new Regex("^" + input_tmp + "$", RegexOptions.IgnoreCase);
+                                                FilterDictItem[] entries_tmp = Array.FindAll(data_result.Entries, x => rgx_tmp.IsMatch(x.Text));
+                                                if (entries_tmp.Length > 0)
+                                                {
+                                                    if (entries.Length == 0) reverseFlag = true;
+                                                    entries = entries.Concat(entries_tmp).ToArray();
+                                                }
+                                                break;
+                                            }
+                                        }
 
                                         // 2개 이상 같은 옵션이 있을때 장비 옵션 (특정) 만 추출
                                         if (entries.Length > 1)
@@ -392,15 +409,31 @@ namespace PoeTradeSearch
                                                 {
                                                     if (matches2[t].Value == "#")
                                                     {
-                                                        if (!isMin)
+                                                        if (reverseFlag)
                                                         {
-                                                            isMin = true;
-                                                            idxMin = t;
+                                                            if (!isMax)
+                                                            {
+                                                                isMax = true;
+                                                                idxMax = t;
+                                                            }
+                                                            else if (!isMin)
+                                                            {
+                                                                isMin = true;
+                                                                idxMin = t;
+                                                            }
                                                         }
-                                                        else if (!isMax)
+                                                        else
                                                         {
-                                                            isMax = true;
-                                                            idxMax = t;
+                                                            if (!isMin)
+                                                            {
+                                                                isMin = true;
+                                                                idxMin = t;
+                                                            }
+                                                            else if (!isMax)
+                                                            {
+                                                                isMax = true;
+                                                                idxMax = t;
+                                                            }
                                                         }
                                                     }
                                                     else if (matches1[t].Value != matches2[t].Value)
@@ -419,106 +452,19 @@ namespace PoeTradeSearch
                                                     {
                                                         filter = entrie;
                                                         _resistance = id_split.Length == 2 && RS.lResistance.ContainsKey(id_split[1]);
-                                                        min = isMin && matches1.Count > idxMin ? ((Match)matches1[idxMin]).Value.ToDouble(99999) : 99999;
-                                                        max = isMax && idxMin < idxMax && matches1.Count > idxMax ? ((Match)matches1[idxMax]).Value.ToDouble(99999) : 99999;
+                                                        if (reverseFlag)
+                                                        {
+                                                            max = isMax && matches1.Count > idxMax ? ((Match)matches1[idxMax]).Value.ToDouble(99999) * -1 : -99999;
+                                                            min = isMin && idxMax > idxMin && matches1.Count > idxMin ? ((Match)matches1[idxMin]).Value.ToDouble(99999) * -1 : 99999;
+                                                        }
+                                                        else
+                                                        {
+                                                            min = isMin && matches1.Count > idxMin ? ((Match)matches1[idxMin]).Value.ToDouble(99999) : 99999;
+                                                            max = isMax && idxMin < idxMax && matches1.Count > idxMax ? ((Match)matches1[idxMax]).Value.ToDouble(99999) : 99999;
+                                                        }
                                                     }
 
                                                     break;
-                                                }
-                                            }
-                                        }
-                                    }
-
-                                    if (filter == null)
-                                    {
-                                        // "동작 속도 #% 증가" 처럼, 내부적으로는 음수로 계산할 경우를 위해 루프를 한번 더 돌림
-                                        bool flag = false;
-                                        for (int l = 0; l < PS.ReverseIncreaseDecrease.Entries.Length; l++)
-                                        {
-                                            if (input.Contains(PS.ReverseIncreaseDecrease.Entries[l].Text[z]))
-                                            {
-                                                input = Regex.Replace(input, PS.ReverseIncreaseDecrease.Entries[l].Text[z], PS.ReverseIncreaseDecrease.Entries[l%2==0?l+1:l-1].Text[z]);
-                                                flag = true;
-                                                break;
-                                            }
-                                        }
-                                        if (flag)
-                                        {
-                                            foreach (FilterDict data_result in mFilter[z].Result)
-                                            {
-                                                Regex rgx = new Regex("^" + input + "$", RegexOptions.IgnoreCase);
-                                                FilterDictItem[] entries = Array.FindAll(data_result.Entries, x => rgx.IsMatch(x.Text));
-
-                                                // 2개 이상 같은 옵션이 있을때 장비 옵션 (특정) 만 추출
-                                                if (entries.Length > 1)
-                                                {
-                                                    FilterDictItem[] entries_tmp = Array.FindAll(entries, x => x.Part == cate_ids[0]);
-                                                    // 화살통 제외
-                                                    if (entries_tmp.Length > 0 && (cate_ids.Length == 1 || cate_ids[1] != "quiver"))
-                                                    {
-                                                        local_exists = true;
-                                                        entries = entries_tmp;
-                                                    }
-                                                    else
-                                                    {
-                                                        entries = Array.FindAll(entries, x => x.Part == null);
-                                                    }
-                                                }
-
-                                                if (entries.Length > 0)
-                                                {
-                                                    Array.Sort(entries, delegate (FilterDictItem entrie1, FilterDictItem entrie2)
-                                                    {
-                                                        return (entrie2.Part ?? "").CompareTo(entrie1.Part ?? "");
-                                                    });
-
-                                                    MatchCollection matches1 = Regex.Matches(options[o], @"[-]?([0-9]+\.[0-9]+|[0-9]+)");
-                                                    foreach (FilterDictItem entrie in entries)
-                                                    {
-                                                        int idxMin = 0, idxMax = 0;
-                                                        bool isMin = false, isMax = false;
-                                                        bool isBreak = true;
-
-                                                        MatchCollection matches2 = Regex.Matches(entrie.Text.Split('\n')[0], @"[-]?([0-9]+\.[0-9]+|[0-9]+|#)");
-
-                                                        for (int t = 0; t < matches2.Count; t++)
-                                                        {
-                                                            if (matches2[t].Value == "#")
-                                                            {
-                                                                if (!isMax)
-                                                                {
-                                                                    isMax = true;
-                                                                    idxMax = t;
-                                                                }
-                                                                else if (!isMin)
-                                                                {
-                                                                    isMin = true;
-                                                                    idxMin = t;
-                                                                }
-                                                            }
-                                                            else if (matches1[t].Value != matches2[t].Value)
-                                                            {
-                                                                isBreak = false;
-                                                                break;
-                                                            }
-                                                        }
-
-                                                        if (isBreak)
-                                                        {
-                                                            string[] id_split = entrie.Id.Split('.');
-                                                            (FindName("cbOpt" + k) as ComboBox).Items.Add(new FilterEntrie(cate_ids[0], id_split[0], id_split[1], data_result.Label));
-
-                                                            if (filter == null)
-                                                            {
-                                                                filter = entrie;
-                                                                _resistance = id_split.Length == 2 && RS.lResistance.ContainsKey(id_split[1]);
-                                                                max = isMax && matches1.Count > idxMax ? ((Match)matches1[idxMax]).Value.ToDouble(99999) : 99999;
-                                                                min = isMin && idxMin < idxMax && matches1.Count > idxMin ? ((Match)matches1[idxMin]).Value.ToDouble(99999) : 99999;
-                                                            }
-
-                                                            break;
-                                                        }
-                                                    }
                                                 }
                                             }
                                         }
